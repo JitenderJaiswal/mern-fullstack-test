@@ -33,14 +33,7 @@ MONGO_URI=mongodb://127.0.0.1:27017/employee_interview
 
 Do not commit `.env` files or credentials.
 
-3. Load the 36 sample employees (safe to run again because records are upserted by email):
-
-```bash
-cd backend
-npm run seed
-```
-
-4. Start the API and client in separate terminals:
+3. Start the API and client in separate terminals:
 
 ```bash
 cd backend

@@ -1,66 +1,107 @@
-# MERN Employee Management — Interview Starter
+# MERN Employee Management
 
-A **starter project, not a completed solution**, for a 2–3 hour MERN interview.
+A responsive employee management application with CRUD, server-side pagination, search, salary sorting, and UTC joining-date filters.
 
 ## Requirements
-- Node.js 20+ and npm
-- MongoDB running locally, or a MongoDB Atlas connection string
+
+- Node.js 20+
+- MongoDB running locally or a MongoDB Atlas connection string
 
 ## Setup
-```bash
-git clone <YOUR_GITHUB_REPOSITORY_URL>
-cd mern-employee-interview-boilerplate
-npm install
-npm run install:all
-```
-Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env`. Set `MONGO_URI` as appropriate.
 
-Start both apps:
+1. Install dependencies:
+
 ```bash
+cd backend
+npm install
+cd ../frontend
+npm install
+```
+
+2. Copy the environment templates:
+
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.example frontend/.env
+```
+
+On Windows PowerShell, use `Copy-Item` instead of `cp` if needed. The default database is `employee_interview`, configured by this part of `backend/.env`:
+
+```env
+MONGO_URI=mongodb://127.0.0.1:27017/employee_interview
+```
+
+Do not commit `.env` files or credentials.
+
+3. Load the 36 sample employees (safe to run again because records are upserted by email):
+
+```bash
+cd backend
+npm run seed
+```
+
+4. Start the API and client in separate terminals:
+
+```bash
+cd backend
 npm run dev
 ```
-Frontend: http://localhost:5173  |  Backend health: http://localhost:5000/api/health
 
-## Candidate assignment (2–3 hours)
-Employee fields: **name, email, joiningDate, salary** only (MongoDB-generated `_id` and timestamps are technical metadata).
+```bash
+cd frontend
+npm run dev
+```
 
-1. Implement CRUD REST endpoints in `backend/src/controllers/employeeController.js`.
-2. Implement frontend employee list, add/edit form, delete confirmation and validation.
-3. Implement **server-side** pagination (`page`, `limit`), search by name/email, salary ascending/descending sort.
-4. Implement **joiningDate** filters: **day, month, year** (no week filter).
-5. Combine search, date filtering, sorting and pagination. Reset to page 1 when a filter changes.
-6. Show loading, empty and error states.
+Frontend: `http://localhost:5173`
 
-### API contract
-| Method | Path | Description |
+API health check: `http://localhost:5000/api/health`
+
+## REST API
+
+| Method | Endpoint | Description |
 | --- | --- | --- |
-| GET | `/api/employees` | List/search/filter/sort/paginate |
-| GET | `/api/employees/:id` | Detail |
-| POST | `/api/employees` | Create |
-| PUT | `/api/employees/:id` | Update |
-| DELETE | `/api/employees/:id` | Delete |
+| POST | `/api/employees` | Create an employee |
+| GET | `/api/employees` | List, filter, sort, and paginate employees |
+| GET | `/api/employees/:id` | Retrieve one employee |
+| PUT | `/api/employees/:id` | Update an employee |
+| DELETE | `/api/employees/:id` | Delete an employee |
+
+Employee data contains exactly `name`, `email`, `joiningDate`, and `salary` (in addition to MongoDB metadata).
+
+### List parameters
+
+- `page`: positive integer, default `1`
+- `limit`: `5`, `10`, or `20`; default `10`
+- `search`: case-insensitive partial name or email match
+- `sortBy`: only `salary` is accepted
+- `order`: `asc` or `desc`
+- Day: `dateFilter=day&date=YYYY-MM-DD`
+- Month: `dateFilter=month&month=YYYY-MM`
+- Year: `dateFilter=year&year=YYYY`
+- Inclusive custom range: `dateFilter=range&startDate=YYYY-MM-DD&endDate=YYYY-MM-DD`
 
 Example:
-`GET /api/employees?page=1&limit=10&search=rahul&sortOrder=desc&dateFilter=month&month=2026-11`
 
-Expected list response:
+```text
+GET /api/employees?page=1&limit=10&search=an&sortBy=salary&order=desc&dateFilter=month&month=2026-11
+```
+
+List response:
+
 ```json
-{"data":[],"pagination":{"totalRecords":0,"currentPage":1,"totalPages":0,"limit":10}}
+{
+  "data": [],
+  "pagination": {
+    "totalRecords": 0,
+    "currentPage": 1,
+    "totalPages": 0,
+    "limit": 10
+  }
+}
 ```
 
-Date conventions: `dateFilter=day&date=YYYY-MM-DD`, `dateFilter=month&month=YYYY-MM`, `dateFilter=year&year=YYYY`. Interpret boundaries in UTC; use inclusive start/exclusive end (`$gte`/`$lt`). Validate query params, dates and salary; handle duplicate email and invalid IDs. Never accept arbitrary sort field names.
+## Date filtering
 
-## Interviewer notes
-The starter intentionally returns HTTP 501 from CRUD handlers and shows placeholder pages. Candidates must implement functionality themselves. Do not commit `.env` files or real credentials.
+All calendar boundaries are interpreted in UTC. Day, month, and year filters use an inclusive start and exclusive end (`$gte`, `$lt`). Custom ranges are inclusive of both entered calendar dates by using the start date at UTC midnight and the day after the end date as the exclusive upper bound. Dates, leap days, month/year boundaries, and reversed ranges are validated.
 
-## Publish to GitHub (interviewer)
-Create an empty repository on GitHub, then from this folder:
-```bash
-git init
-git add .
-git commit -m "Initial interview starter"
-git branch -M main
-git remote add origin https://github.com/YOUR_ORG/mern-employee-interview.git
-git push -u origin main
-```
-Share the repository URL with candidates; they can clone it with `git clone <URL>`.
+The API returns `400` for invalid input or IDs, `404` for missing employees, `409` for duplicate emails, `201` after creation, and `204` after successful deletion.
